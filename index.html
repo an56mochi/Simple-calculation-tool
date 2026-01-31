@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出発時間計算ツール</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #fffaf0; } /* 温かみのあるオフホワイト */
+        .input-card { background: white; border-radius: 1rem; box-shadow: 0 4px 15px -3px rgba(180, 83, 9, 0.1); }
+        /* パターン①：温かいオレンジ系のグラデーション */
+        .result-card-1 { background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); }
+        /* パターン②：柔らかなローズ・テラコッタ系のグラデーション */
+        .result-card-2 { background: linear-gradient(135deg, #fb923c 0%, #db2777 100%); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-md mx-auto space-y-6">
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-2xl font-bold text-orange-900">☀️ 出発時間計算先生</h1>
+            <p class="text-sm text-orange-700/70">ゆとりを持って、心地よい出発を。</p>
+        </div>
+
+        <!-- Main Inputs -->
+        <div class="input-card p-6 space-y-4 border border-orange-100">
+            <div>
+                <label class="block text-sm font-semibold text-orange-900 mb-1">🎯 目標の到着時間</label>
+                <input type="time" id="arrivalTime" value="09:00" onchange="calculate()" 
+                    class="w-full p-3 border border-orange-200 rounded-lg text-lg focus:ring-2 focus:ring-orange-400 focus:outline-none text-slate-700">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-orange-900 mb-1">⏱️ 通常の移動時間</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="travelH" value="1" min="0" oninput="calculate()" 
+                        class="w-full p-3 border border-orange-200 rounded-lg text-center text-lg focus:ring-2 focus:ring-orange-400 focus:outline-none text-slate-700">
+                    <span class="text-orange-800/60 font-medium">h</span>
+                    <input type="number" id="travelM" value="0" min="0" max="59" oninput="calculate()" 
+                        class="w-full p-3 border border-orange-200 rounded-lg text-center text-lg focus:ring-2 focus:ring-orange-400 focus:outline-none text-slate-700">
+                    <span class="text-orange-800/60 font-medium">m</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pattern 1: Fixed Early Arrival -->
+        <div class="result-card-1 p-6 rounded-2xl text-white shadow-lg shadow-orange-200/50">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full border border-white/30">① 早めに到着プラン</span>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="earlyM" value="15" min="0" oninput="calculate()" 
+                        class="w-14 p-1 bg-white/20 border-none rounded text-center text-white font-bold focus:ring-0">
+                    <span class="text-xs font-medium">分前に着く</span>
+                </div>
+            </div>
+            <div class="text-center py-2">
+                <p class="text-[10px] uppercase tracking-widest opacity-80 mb-1">Departure Time</p>
+                <div id="result1" class="text-5xl font-bold tracking-tighter">--:--</div>
+            </div>
+        </div>
+
+        <!-- Pattern 2: Multiplier Buffer -->
+        <div class="result-card-2 p-6 rounded-2xl text-white shadow-lg shadow-rose-200/50">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full border border-white/30">② ゆったり余裕プラン</span>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="bufferFactor" value="1.5" step="0.1" min="1.0" oninput="calculate()" 
+                        class="w-14 p-1 bg-white/20 border-none rounded text-center text-white font-bold focus:ring-0">
+                    <span class="text-xs font-medium">倍の余裕</span>
+                </div>
+            </div>
+            <div class="text-center py-2">
+                <p class="text-[10px] uppercase tracking-widest opacity-80 mb-1">Departure Time</p>
+                <div id="result2" class="text-5xl font-bold tracking-tighter">--:--</div>
+            </div>
+            <p id="bufferText" class="text-[10px] text-center mt-3 bg-black/10 py-1 rounded-full opacity-90">（移動時間：--分として計算）</p>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="text-center pt-4">
+            <p class="text-[10px] text-orange-800/40">心地よい一日になりますように ☕</p>
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            const arrival = document.getElementById('arrivalTime').value;
+            const travelH = parseInt(document.getElementById('travelH').value) || 0;
+            const travelM = parseInt(document.getElementById('travelM').value) || 0;
+            const earlyM = parseInt(document.getElementById('earlyM').value) || 0;
+            const factor = parseFloat(document.getElementById('bufferFactor').value) || 1.0;
+
+            if (!arrival) return;
+
+            const [arrH, arrM] = arrival.split(':').map(Number);
+            const arrivalTotalMinutes = arrH * 60 + arrM;
+            const baseTravelMinutes = (travelH * 60) + travelM;
+
+            // パターン1
+            let result1Minutes = arrivalTotalMinutes - baseTravelMinutes - earlyM;
+            while (result1Minutes < 0) result1Minutes += 1440;
+
+            // パターン2
+            const bufferedTravelMinutes = Math.round(baseTravelMinutes * factor);
+            let result2Minutes = arrivalTotalMinutes - bufferedTravelMinutes;
+            while (result2Minutes < 0) result2Minutes += 1440;
+
+            const format = (num) => num.toString().padStart(2, '0');
+            
+            const r1H = Math.floor(result1Minutes / 60) % 24;
+            const r1M = result1Minutes % 60;
+            document.getElementById('result1').innerText = `${format(r1H)}:${format(r1M)}`;
+
+            const r2H = Math.floor(result2Minutes / 60) % 24;
+            const r2M = result2Minutes % 60;
+            document.getElementById('result2').innerText = `${format(r2H)}:${format(r2M)}`;
+            document.getElementById('bufferText').innerText = `（移動時間を ${bufferedTravelMinutes} 分として計算しました）`;
+        }
+        calculate();
+    </script>
+</body>
+</html>
